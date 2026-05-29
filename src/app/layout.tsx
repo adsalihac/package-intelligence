@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   title: "Package Intelligence — React Native & Expo Dependency Insights",
   description:
     "Analyze React Native and Expo dependencies for health, compatibility, bundle impact, and actionable recommendations.",
+  icons: {
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
   keywords: [
     "React Native",
     "Expo",

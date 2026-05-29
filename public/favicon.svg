@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="package-intelligence favicon">
+  <defs>
+    <linearGradient id="surface" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="topFace" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e6fffb"/>
+      <stop offset="100%" stop-color="#c7d2fe"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#surface)"/>
+  <rect x="7" y="7" width="50" height="50" rx="13" fill="#0f2238" opacity="0.22"/>
+
+  <g transform="translate(14 14)">
+    <path d="M18 2 34 10 18 18 2 10z" fill="url(#topFace)"/>
+    <path d="M2 10v16l16 8V18z" fill="#d7f4ef"/>
+    <path d="M34 10v16l-16 8V18z" fill="#a5b4fc"/>
+    <path d="M18 18v16" stroke="#0f2238" stroke-opacity="0.24" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
+
+  <circle cx="50" cy="14" r="5" fill="#ea580c"/>
+  <path d="M50 10.6v6.8M46.6 14h6.8" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+</svg>

@@ -6,6 +6,7 @@ import { SectionHeading } from "@/components/landing/section-heading";
 import { ThemeToggle } from "@/components/landing/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const repoUrl = "https://github.com/adsalihac/package-intelligence";
 const forkUrl = "https://github.com/adsalihac/package-intelligence/fork";
@@ -42,19 +43,16 @@ export default async function Home() {
     <div className="ai-grid-bg min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 sm:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-2xl border border-primary/30 bg-primary/15 font-semibold text-primary shadow-[0_8px_24px_color-mix(in_srgb,var(--primary)_30%,transparent)]">
-              PI
-            </div>
-            <div>
-              <p className="text-sm font-semibold tracking-wide text-foreground">
-                package-intelligence
-              </p>
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                Build Intelligence Platform
-              </p>
-            </div>
-          </div>
+          <a href="/" className="flex items-center" aria-label="package-intelligence home">
+            <Image
+              src="/package-intelligence-logo.svg"
+              alt="package-intelligence"
+              width={232}
+              height={58}
+              className="h-10 w-auto sm:h-11"
+              priority
+            />
+          </a>
           <div className="flex items-center gap-3">
             <a
               href={repoUrl}
