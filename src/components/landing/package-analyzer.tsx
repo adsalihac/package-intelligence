@@ -875,28 +875,9 @@ export function PackageAnalyzer() {
         </Card>
       </div>
 
+
       {analysis && (
         <>
-          {/* Export / Share bar */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <BarChart2 size={16} className="text-primary" />
-              {enriched.length} packages analysed
-              {loadingLive ? (
-                <span className="text-xs text-muted-foreground animate-pulse">(loading live data…)</span>
-              ) : enriched.filter((e) => e.hasLiveData).length > 0 && (
-                <span className="text-xs text-emerald-600 dark:text-emerald-400">· {enriched.filter((e) => e.hasLiveData).length} with live data</span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {compareSet.size === 2 && <Button size="sm" onClick={() => setShowCompare(true)}>Compare ({compareSet.size})</Button>}
-              {compareSet.size === 1 && <span className="self-center text-xs text-muted-foreground">Select 1 more to compare</span>}
-              <Button variant="outline" size="sm" onClick={exportMd}><Download size={14} className="mr-1.5" />Export MD</Button>
-              <Button variant="outline" size="sm" onClick={share}>
-                {copied ? <><Check size={14} className="mr-1.5 text-emerald-500" />Copied!</> : <><Share2 size={14} className="mr-1.5" />Share Link</>}
-              </Button>
-            </div>
-          </div>
 
           {/* Upgrade Manager */}
           <Card className="ai-panel mt-8 border-border/70 bg-card/90">
@@ -1228,8 +1209,38 @@ export function PackageAnalyzer() {
             </Card>
           )}
 
+          {/* Export / Share bar (moved above table) */}
+          <div className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/70 px-4 py-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <BarChart2 size={16} className="text-primary" />
+              {enriched.length} packages analysed
+              {loadingLive ? (
+                <span className="text-xs text-muted-foreground animate-pulse">(loading live data…)</span>
+              ) : enriched.filter((e) => e.hasLiveData).length > 0 && (
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">· {enriched.filter((e) => e.hasLiveData).length} with live data</span>
+              )}
+            </div>
+            <div className="flex flex-1 justify-end gap-2">
+              {compareSet.size > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setCompareSet(new Set())}>
+                  Clear compare ({compareSet.size}/2)
+                </Button>
+              )}
+              {compareSet.size === 2 && (
+                <Button size="sm" className="ml-2" onClick={() => setShowCompare(true)}>
+                  Compare ({compareSet.size})
+                </Button>
+              )}
+              {compareSet.size === 1 && <span className="self-center text-xs text-muted-foreground">Select 1 more to compare</span>}
+              <Button variant="outline" size="sm" onClick={exportMd}><Download size={14} className="mr-1.5" />Export MD</Button>
+              <Button variant="outline" size="sm" onClick={share}>
+                {copied ? <><Check size={14} className="mr-1.5 text-emerald-500" />Copied!</> : <><Share2 size={14} className="mr-1.5" />Share Link</>}
+              </Button>
+            </div>
+          </div>
+
           {/* Package Analysis Table */}
-          <Card className="ai-panel mt-8 border-border/70 bg-card/90">
+          <Card className="ai-panel mt-4 border-border/70 bg-card/90">
             <CardHeader><CardTitle className="text-xl">Package Analysis Table</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap items-center gap-3">
@@ -1239,7 +1250,6 @@ export function PackageAnalyzer() {
                     <button key={key} onClick={() => setTableTab(key)} className={`rounded-full px-3 py-1 text-xs font-semibold transition ${tableTab === key ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>{label}</button>
                   ))}
                 </div>
-                {compareSet.size > 0 && <button onClick={() => setCompareSet(new Set())} className="ml-auto text-xs text-muted-foreground hover:text-foreground transition">Clear compare ({compareSet.size}/2)</button>}
               </div>
               <div className="overflow-x-auto rounded-3xl border border-border/70 bg-background/70">
                 <Table>
