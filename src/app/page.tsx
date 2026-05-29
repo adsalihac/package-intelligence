@@ -110,7 +110,17 @@ export default async function Home() {
       <footer className="border-t border-border/70 bg-background/70 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-3 px-6 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:px-8">
           <span>package-intelligence © 2026</span>
-          <span>Designed for React Native and Expo product teams</span>
+          <div className="flex items-center gap-4">
+            <a
+              href="https://buymeacoffee.com/adsalihac"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-200/60 bg-amber-50/60 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm backdrop-blur-sm transition hover:border-amber-400/60 hover:bg-amber-100/80"
+            >
+              <span>☕</span>
+              <span>Buy me a coffee</span>
+            </a>
+          </div>
         </div>
       </footer>
     </div>
