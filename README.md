@@ -1,48 +1,72 @@
 # package-intelligence
 
-package-intelligence is a Next.js application for exploring package metadata and surfacing package insights with a clean, developer-focused UI.
+package-intelligence is a modern web app for analyzing React Native and Expo dependencies from a `package.json` file and surfacing actionable upgrade intelligence.
 
-## Features
+## What It Does
 
-- Landing page experience with modular sections for product messaging
-- Reusable UI primitives for cards, inputs, tabs, tables, and buttons
-- Component-driven structure for easy feature expansion
-- TypeScript-based codebase for safer refactoring and maintenance
-- Tailwind CSS styling for fast, consistent UI development
+- Detects project type (`Expo`, `React Native`, or `Unknown`)
+- Parses and analyzes dependencies and devDependencies
+- Generates package health and risk insights
+- Highlights migration opportunities and dependency recommendations
+- Estimates bundle impact for APK and IPA
+- Includes an Expo SDK upgrade check against the latest npm `expo` release
+- Supports light/dark themes with a custom product UI system
 
-## Prerequisites
+## Key Behavior
+
+- Results are shown only after you upload or paste a valid `package.json`
+- No demo report is rendered by default
+- Expo SDK latest version is fetched from npm; fallback baseline is SDK 56
+
+## Tech Stack
+
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS 4
+- Framer Motion
+- Base UI + CVA
+
+## Getting Started
+
+### Prerequisites
 
 - Node.js 18+
 - npm 9+
 
-## Installation
-
-1. Clone the repository:
+### Installation
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/adsalihac/package-intelligence.git
 cd package-intelligence
-```
-
-2. Install dependencies:
-
-```bash
 npm install
 ```
 
-3. Start the development server:
+### Run Locally
 
 ```bash
 npm run dev
 ```
 
-4. Open http://localhost:3000 in your browser.
+Open `http://localhost:3000`.
+
+## Scripts
+
+```bash
+npm run dev    # start dev server
+npm run build  # production build
+npm run start  # run built app
+npm run lint   # run ESLint
+```
 
 ## Project Structure
 
 ```text
-native-lens/
+package-intelligence/
 ├─ public/
+│  ├─ favicon.svg
+│  ├─ package-intelligence-logo.svg
+│  └─ package-intelligence-logo-dark.svg
 ├─ src/
 │  ├─ app/
 │  │  ├─ globals.css
@@ -50,66 +74,32 @@ native-lens/
 │  │  └─ page.tsx
 │  ├─ components/
 │  │  ├─ landing/
-│  │  │  ├─ feature-grid.tsx
-│  │  │  ├─ future-features.tsx
 │  │  │  ├─ hero.tsx
+│  │  │  ├─ feature-grid.tsx
 │  │  │  ├─ package-analyzer.tsx
+│  │  │  ├─ future-features.tsx
 │  │  │  ├─ section-heading.tsx
 │  │  │  └─ theme-toggle.tsx
 │  │  └─ ui/
-│  │     ├─ badge.tsx
-│  │     ├─ button.tsx
-│  │     ├─ card.tsx
-│  │     ├─ input.tsx
-│  │     ├─ table.tsx
-│  │     ├─ tabs.tsx
-│  │     └─ textarea.tsx
 │  └─ lib/
-│     └─ utils.ts
 ├─ README.md
 └─ LICENSE
 ```
 
-## Development
+## Contributing
 
-```bash
-npm run dev
-```
-
-Open http://localhost:3000 in your browser.
-
-## Build
-
-```bash
-npm run build
-```
-
-## Production
-
-```bash
-npm run start
-```
-
-## Contribution
-
-1. Create a feature branch from `main`.
-2. Make your changes with clear, focused commits.
-3. Run checks before opening a pull request:
+1. Fork the repository
+2. Create a feature branch from `main`
+3. Make focused changes with clear commits
+4. Run checks:
 
 ```bash
 npm run lint
 npm run build
 ```
 
-4. Open a pull request with a clear description of what changed and why.
-
-## Tech Stack
-
-- Next.js
-- React
-- TypeScript
-- Tailwind CSS
+5. Open a pull request with a clear summary
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+Licensed under the MIT License. See [LICENSE](LICENSE).

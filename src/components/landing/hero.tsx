@@ -33,15 +33,6 @@ export function Hero() {
           >
             Analyze package.json
           </a>
-          <a
-            href="#report"
-            className={cn(
-              buttonVariants({ size: "lg", variant: "outline" }),
-              "h-11 px-7"
-            )}
-          >
-            View Demo Report
-          </a>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
           <span>Expo alternatives</span>
