@@ -2,29 +2,29 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 
 const features = [
   {
-    title: "Expo Intelligence",
+    title: "Expo mapping",
     description:
-      "Find Expo-native alternatives for React Native packages.",
+      "Map React Native packages to Expo-native alternatives in seconds.",
   },
   {
-    title: "Package Health",
-    description: "Analyze maintenance status, release activity, and project health.",
+    title: "Health scoring",
+    description: "Track maintenance signals, release cadence, and ecosystem trust.",
   },
   {
-    title: "New Architecture Readiness",
-    description: "Check compatibility with Fabric and TurboModules.",
+    title: "Architecture readiness",
+    description: "Check Fabric and TurboModules compatibility before upgrades.",
   },
   {
-    title: "Bundle Impact",
-    description: "Estimate package size impact on your application.",
+    title: "Bundle pressure",
+    description: "Estimate package weight and surface heavy runtime dependencies.",
   },
   {
-    title: "Risk Detection",
-    description: "Identify deprecated, archived, or unmaintained packages.",
+    title: "Risk detection",
+    description: "Flag archived, deprecated, or low-signal packages early.",
   },
   {
-    title: "Recommendations",
-    description: "Receive actionable package replacement suggestions.",
+    title: "Upgrade guidance",
+    description: "Get clear replacement and migration recommendations for your stack.",
   },
 ];
 
@@ -33,9 +33,9 @@ export function FeatureGrid() {
     <section className="mx-auto max-w-6xl py-10 sm:py-16">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {features.map((feature) => (
-          <Card key={feature.title} className="border-border/60 bg-card/80 shadow-sm">
+          <Card key={feature.title} className="ai-panel border-border/70 bg-card/85">
             <CardHeader className="space-y-2">
-              <CardTitle className="text-lg">{feature.title}</CardTitle>
+              <CardTitle className="text-lg tracking-tight">{feature.title}</CardTitle>
               <CardDescription className="text-sm leading-6 text-muted-foreground">
                 {feature.description}
               </CardDescription>

@@ -15,21 +15,21 @@ export function Hero() {
         transition={{ duration: 0.6 }}
         className="mx-auto flex max-w-5xl flex-col items-center gap-6 text-center"
       >
-        <Badge className="rounded-full border border-primary/20 bg-primary/10 px-4 py-1 text-xs font-semibold text-primary">
-          Package Intelligence Beta
+        <Badge className="rounded-full border border-primary/30 bg-primary/15 px-4 py-1 text-primary">
+          package-intelligence beta
         </Badge>
-        <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-          Understand Your React Native & Expo Dependencies in Seconds
+        <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+          Build-ready dependency intelligence for React Native teams
         </h1>
         <p className="max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
-          Upload your package.json and instantly discover Expo alternatives,
-          package risks, bundle impact, compatibility issues, and optimization
-          opportunities.
+          Upload your package.json and get an instant build-style report on
+          package health, Expo alignment, architecture readiness, and bundle
+          pressure.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <a
             href="#analyzer"
-            className={cn(buttonVariants({ size: "lg" }), "h-11 px-6")}
+            className={cn(buttonVariants({ size: "lg" }), "h-11 px-7")}
           >
             Analyze package.json
           </a>
@@ -37,20 +37,20 @@ export function Hero() {
             href="#report"
             className={cn(
               buttonVariants({ size: "lg", variant: "outline" }),
-              "h-11 px-6"
+              "h-11 px-7"
             )}
           >
             View Demo Report
           </a>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-4 text-xs uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-center gap-4 text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">
           <span>Expo alternatives</span>
-          <span>New Architecture</span>
+          <span>New architecture</span>
           <span>Bundle impact</span>
           <span>Risk detection</span>
         </div>
       </motion.div>
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle,rgba(37,99,235,0.12),transparent_60%)]" />
+      <div className="pointer-events-none absolute -top-8 left-1/2 h-72 w-[38rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--primary)_28%,transparent),transparent_65%)] blur-xl" />
     </section>
   );
 }

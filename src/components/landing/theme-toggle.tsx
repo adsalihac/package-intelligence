@@ -23,7 +23,7 @@ export function ThemeToggle() {
       size="sm"
       onClick={toggleTheme}
       aria-label="Toggle dark mode"
-      className="gap-2"
+      className="gap-2 border-border/80 bg-background/70"
     >
       {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
       <span className="hidden sm:inline">

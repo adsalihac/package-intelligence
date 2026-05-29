@@ -337,7 +337,7 @@ export function PackageAnalyzer() {
   return (
     <section id="analyzer" className="mx-auto max-w-6xl py-12 sm:py-16">
       <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
-        <Card className="border-border/60 bg-card/90 shadow-lg shadow-black/[0.03]">
+        <Card className="ai-panel border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle className="text-xl">Upload package.json</CardTitle>
           </CardHeader>
@@ -353,10 +353,10 @@ export function PackageAnalyzer() {
               </TabsList>
               <TabsContent value="upload" className="mt-4 space-y-4">
                 <div
-                  className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-6 py-10 text-center transition ${
+                  className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-3xl border border-dashed px-6 py-10 text-center transition ${
                     isDragging
-                      ? "border-primary/70 bg-primary/5"
-                      : "border-border/70 bg-muted/40"
+                      ? "border-primary/80 bg-primary/10"
+                      : "border-border/80 bg-muted/55"
                   }`}
                   role="button"
                   tabIndex={0}
@@ -452,7 +452,7 @@ export function PackageAnalyzer() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/90 shadow-lg shadow-black/[0.03]">
+        <Card className="ai-panel border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle className="text-xl">Project Overview</CardTitle>
           </CardHeader>
@@ -460,9 +460,9 @@ export function PackageAnalyzer() {
             {overviewCards.map((item) => (
               <div
                 key={item.label}
-                className="rounded-2xl border border-border/60 bg-muted/40 px-4 py-4"
+                className="rounded-3xl border border-border/70 bg-muted/55 px-4 py-4"
               >
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                   {item.label}
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-foreground">
@@ -475,7 +475,7 @@ export function PackageAnalyzer() {
       </div>
 
       <div id="report" className="mt-12 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-border/60 bg-card/90 shadow-lg shadow-black/[0.03]">
+        <Card className="ai-panel border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle className="text-xl">Recommendations</CardTitle>
           </CardHeader>
@@ -488,7 +488,7 @@ export function PackageAnalyzer() {
               analysis.recommendations.slice(0, 2).map((item) => (
                 <div
                   key={item.name}
-                  className="rounded-2xl border border-border/60 bg-muted/30 p-4"
+                  className="rounded-3xl border border-border/70 bg-muted/50 p-4"
                 >
                   <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                     <span>{item.name}</span>
@@ -505,12 +505,12 @@ export function PackageAnalyzer() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/90 shadow-lg shadow-black/[0.03]">
+        <Card className="ai-panel border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle className="text-xl">Bundle Impact</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-3 rounded-2xl border border-border/60 bg-muted/40 p-4">
+            <div className="space-y-3 rounded-3xl border border-border/70 bg-muted/55 p-4">
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>Estimated APK Impact</span>
                 <Badge className={impactBadgeStyles[analysis.apkImpact]}>
@@ -532,7 +532,7 @@ export function PackageAnalyzer() {
                 {analysis.heavyPackagesList.map((item) => (
                   <div
                     key={item.name}
-                    className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/30 px-3 py-2 text-sm"
+                    className="flex items-center justify-between rounded-3xl border border-border/70 bg-muted/50 px-3 py-2 text-sm"
                   >
                     <span>{item.name}</span>
                     <Badge className={impactBadgeStyles[item.bundleImpact]}>
@@ -547,7 +547,7 @@ export function PackageAnalyzer() {
       </div>
 
       <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_1fr]">
-        <Card className="border-border/60 bg-card/90 shadow-lg shadow-black/[0.03]">
+        <Card className="ai-panel border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle className="text-xl">
               Expo Migration Opportunities
@@ -563,7 +563,7 @@ export function PackageAnalyzer() {
             {analysis.migrationOpportunities.map((item) => (
               <div
                 key={item.current}
-                className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-sm"
+                className="rounded-3xl border border-border/70 bg-muted/50 px-4 py-3 text-sm"
               >
                 <div className="text-muted-foreground">Replace:</div>
                 <div className="mt-1 font-semibold text-foreground">
@@ -575,7 +575,7 @@ export function PackageAnalyzer() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 bg-card/90 shadow-lg shadow-black/[0.03]">
+        <Card className="ai-panel border-border/70 bg-card/90">
           <CardHeader>
             <CardTitle className="text-xl">Risk Detection</CardTitle>
           </CardHeader>
@@ -588,7 +588,7 @@ export function PackageAnalyzer() {
               analysis.riskDetections.map((item) => (
                 <div
                   key={item.name}
-                  className="rounded-2xl border border-border/60 bg-muted/30 px-4 py-3 text-sm"
+                  className="rounded-3xl border border-border/70 bg-muted/50 px-4 py-3 text-sm"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-foreground">
@@ -606,12 +606,12 @@ export function PackageAnalyzer() {
         </Card>
       </div>
 
-      <Card className="mt-12 border-border/60 bg-card/90 shadow-lg shadow-black/[0.03]">
+      <Card className="ai-panel mt-12 border-border/70 bg-card/90">
         <CardHeader>
           <CardTitle className="text-xl">Package Analysis Table</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto rounded-2xl border border-border/60">
+          <div className="overflow-x-auto rounded-3xl border border-border/70 bg-background/70">
             <Table>
               <TableHeader>
                 <TableRow>
