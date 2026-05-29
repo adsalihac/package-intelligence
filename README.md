@@ -1,36 +1,115 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# package-intelligence
 
-## Getting Started
+package-intelligence is a Next.js application for exploring package metadata and surfacing package insights with a clean, developer-focused UI.
 
-First, run the development server:
+## Features
+
+- Landing page experience with modular sections for product messaging
+- Reusable UI primitives for cards, inputs, tabs, tables, and buttons
+- Component-driven structure for easy feature expansion
+- TypeScript-based codebase for safer refactoring and maintenance
+- Tailwind CSS styling for fast, consistent UI development
+
+## Prerequisites
+
+- Node.js 18+
+- npm 9+
+
+## Installation
+
+1. Clone the repository:
+
+```bash
+git clone <your-repository-url>
+cd native-lens
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open http://localhost:3000 in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+native-lens/
+├─ public/
+├─ src/
+│  ├─ app/
+│  │  ├─ globals.css
+│  │  ├─ layout.tsx
+│  │  └─ page.tsx
+│  ├─ components/
+│  │  ├─ landing/
+│  │  │  ├─ feature-grid.tsx
+│  │  │  ├─ future-features.tsx
+│  │  │  ├─ hero.tsx
+│  │  │  ├─ package-analyzer.tsx
+│  │  │  ├─ section-heading.tsx
+│  │  │  └─ theme-toggle.tsx
+│  │  └─ ui/
+│  │     ├─ badge.tsx
+│  │     ├─ button.tsx
+│  │     ├─ card.tsx
+│  │     ├─ input.tsx
+│  │     ├─ table.tsx
+│  │     ├─ tabs.tsx
+│  │     └─ textarea.tsx
+│  └─ lib/
+│     └─ utils.ts
+├─ README.md
+└─ LICENSE
+```
 
-## Learn More
+## Development
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open http://localhost:3000 in your browser.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Build
 
-## Deploy on Vercel
+```bash
+npm run build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Production
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run start
+```
+
+## Contribution
+
+1. Create a feature branch from `main`.
+2. Make your changes with clear, focused commits.
+3. Run checks before opening a pull request:
+
+```bash
+npm run lint
+npm run build
+```
+
+4. Open a pull request with a clear description of what changed and why.
+
+## Tech Stack
+
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
