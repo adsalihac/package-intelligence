@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ type PackageJson = {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
 };
+
+type ProjectType = "Expo" | "React Native" | "Unknown";
 
 const demoAlternatives: Record<string, { alternative: string }> = {
   "react-native-fast-image": { alternative: "expo-image" },
@@ -117,6 +119,20 @@ const parsePackageJson = (value: string) => {
   };
 };
 
+const getMajorVersion = (version: string | undefined) => {
+  if (!version) return null;
+  const match = /(\d+)/.exec(version);
+  if (!match) return null;
+  return Number.parseInt(match[1], 10);
+};
+
+const detectProjectType = (payload: PackageJson): ProjectType => {
+  const deps = payload.dependencies ?? {};
+  if (typeof deps.expo === "string") return "Expo";
+  if (typeof deps["react-native"] === "string") return "React Native";
+  return "Unknown";
+};
+
 const buildPackage = (
   name: string,
   version: string,
@@ -186,7 +202,7 @@ const buildPackage = (
   };
 };
 
-const analyzePackages = (payload: PackageJson) => {
+const analyzePackages = (payload: PackageJson, latestExpoMajor = 56) => {
   const entries: PackageInsight[] = [];
   Object.entries(payload.dependencies ?? {}).forEach(([name, version]) => {
     entries.push(buildPackage(name, version, "Dependency"));
@@ -274,6 +290,19 @@ const analyzePackages = (payload: PackageJson) => {
               : "Update recommended to avoid compatibility drift.",
     }));
 
+    const dependencies = payload.dependencies ?? {};
+    const projectType = detectProjectType(payload);
+    const expoVersionRaw = dependencies.expo;
+    const expoInstalledMajor = getMajorVersion(expoVersionRaw);
+    const isExpoLatest =
+      projectType === "Expo" &&
+      expoInstalledMajor !== null &&
+      expoInstalledMajor >= latestExpoMajor;
+    const expoUpgradeNeeded =
+      projectType === "Expo" &&
+      expoInstalledMajor !== null &&
+      expoInstalledMajor < latestExpoMajor;
+
   return {
     entries,
     dependencyCount,
@@ -288,6 +317,12 @@ const analyzePackages = (payload: PackageJson) => {
     apkImpact,
     ipaImpact,
     riskDetections,
+    projectType,
+    expoVersionRaw,
+    expoInstalledMajor,
+    latestExpoMajor,
+    isExpoLatest,
+    expoUpgradeNeeded,
   };
 };
 
@@ -295,20 +330,52 @@ export function PackageAnalyzer() {
   const [inputValue, setInputValue] = useState(samplePackageJson);
   const [error, setError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState(() =>
-    analyzePackages(parsePackageJson(samplePackageJson))
+    analyzePackages(parsePackageJson(samplePackageJson), 56)
   );
+  const [latestExpoMajor, setLatestExpoMajor] = useState(56);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadLatestExpoVersion = async () => {
+      try {
+        const response = await fetch("https://registry.npmjs.org/expo/latest", {
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+
+        const data = (await response.json()) as { version?: string };
+        const major = getMajorVersion(data.version);
+        if (major !== null) {
+          setLatestExpoMajor(major);
+        }
+      } catch {
+        // Keep fallback SDK major when network request fails.
+      }
+    };
+
+    void loadLatestExpoVersion();
+
+    return () => controller.abort();
+  }, []);
 
   const handleAnalyze = (value: string) => {
     try {
       const parsed = parsePackageJson(value);
-      setAnalysis(analyzePackages(parsed));
+      setAnalysis(analyzePackages(parsed, latestExpoMajor));
       setError(null);
     } catch {
       setError("Invalid JSON. Please check your package.json formatting.");
     }
   };
+
+  useEffect(() => {
+    handleAnalyze(inputValue);
+    // latestExpoMajor should refresh Expo SDK status in existing results.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latestExpoMajor]);
 
   const handleFile = async (file: File) => {
     const text = await file.text();
@@ -333,6 +400,41 @@ export function PackageAnalyzer() {
     ],
     [analysis]
   );
+
+  let expoUpgradePanel: React.ReactNode;
+  if (analysis.projectType === "Expo") {
+    if (analysis.expoUpgradeNeeded) {
+      expoUpgradePanel = (
+        <div className="rounded-2xl border border-amber-300/70 bg-amber-100/60 px-4 py-3 text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">
+          Expo SDK is behind the latest release. Upgrade from SDK {analysis.expoInstalledMajor} to SDK {analysis.latestExpoMajor}.
+        </div>
+      );
+    } else if (analysis.isExpoLatest) {
+      expoUpgradePanel = (
+        <div className="rounded-2xl border border-emerald-300/70 bg-emerald-100/60 px-4 py-3 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+          Expo SDK is up to date with the latest release.
+        </div>
+      );
+    } else {
+      expoUpgradePanel = (
+        <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3 text-muted-foreground">
+          Expo is detected but the version format could not be parsed automatically.
+        </div>
+      );
+    }
+  } else if (analysis.projectType === "React Native") {
+    expoUpgradePanel = (
+      <div className="rounded-2xl border border-sky-300/70 bg-sky-100/60 px-4 py-3 text-sky-900 dark:border-sky-400/40 dark:bg-sky-500/10 dark:text-sky-200">
+        React Native project detected without Expo. SDK upgrade check applies only to Expo projects.
+      </div>
+    );
+  } else {
+    expoUpgradePanel = (
+      <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3 text-muted-foreground">
+        Could not identify Expo or React Native dependencies from this package.json.
+      </div>
+    );
+  }
 
   return (
     <section id="analyzer" className="mx-auto max-w-6xl py-12 sm:py-16">
@@ -473,6 +575,42 @@ export function PackageAnalyzer() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="ai-panel mt-8 border-border/70 bg-card/90">
+        <CardHeader>
+          <CardTitle className="text-xl">Expo SDK Upgrade Check</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Project Type
+              </p>
+              <p className="mt-2 text-base font-semibold text-foreground">
+                {analysis.projectType}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Installed Expo
+              </p>
+              <p className="mt-2 text-base font-semibold text-foreground">
+                {analysis.expoVersionRaw ?? "Not installed"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Latest Expo SDK
+              </p>
+              <p className="mt-2 text-base font-semibold text-foreground">
+                {analysis.latestExpoMajor}
+              </p>
+            </div>
+          </div>
+
+          {expoUpgradePanel}
+        </CardContent>
+      </Card>
 
       <div id="report" className="mt-12 grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <Card className="ai-panel border-border/70 bg-card/90">
