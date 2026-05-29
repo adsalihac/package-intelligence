@@ -21,7 +21,7 @@ package-intelligence is a Next.js application for exploring package metadata and
 
 ```bash
 git clone <your-repository-url>
-cd native-lens
+cd package-intelligence
 ```
 
 2. Install dependencies:
