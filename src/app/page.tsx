@@ -7,7 +7,37 @@ import { ThemeToggle } from "@/components/landing/theme-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export default function Home() {
+const repoUrl = "https://github.com/adsalihac/package-intelligence";
+const forkUrl = "https://github.com/adsalihac/package-intelligence/fork";
+
+const formatStarCount = (count: number) => {
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
+  return `${count}`;
+};
+
+async function getStarCount() {
+  try {
+    const response = await fetch("https://api.github.com/repos/adsalihac/package-intelligence", {
+      next: { revalidate: 3600 },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as { stargazers_count?: number };
+    return typeof data.stargazers_count === "number"
+      ? data.stargazers_count
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function Home() {
+  const starCount = await getStarCount();
+
   return (
     <div className="ai-grid-bg min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/70 backdrop-blur-xl">
@@ -25,26 +55,25 @@ export default function Home() {
               </p>
             </div>
           </div>
-          <nav className="hidden items-center gap-6 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground md:flex">
-            <a className="transition hover:text-foreground" href="#features">
-              Features
-            </a>
-            <a className="transition hover:text-foreground" href="#analyzer">
-              Analyzer
-            </a>
-            <a className="transition hover:text-foreground" href="#report">
-              Demo Report
-            </a>
-          </nav>
           <div className="flex items-center gap-3">
             <a
-              href="#analyzer"
+              href={repoUrl}
+              target="_blank"
+              rel="noreferrer"
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
                 "hidden sm:flex"
               )}
             >
-              Start analysis
+              Star {starCount === null ? "★" : `★ ${formatStarCount(starCount)}`}
+            </a>
+            <a
+              href={forkUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(buttonVariants({ size: "sm" }), "hidden sm:flex")}
+            >
+              Contribute
             </a>
             <ThemeToggle />
           </div>
