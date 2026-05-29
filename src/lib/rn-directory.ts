@@ -20,6 +20,7 @@ export type RNDirData = {
   web?: boolean;
   tvos?: boolean;
   visionos?: boolean;
+  windows?: boolean;
   unmaintained?: boolean;
   alternatives?: string[];
 };

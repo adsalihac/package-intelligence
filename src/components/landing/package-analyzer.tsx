@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   AlertTriangle,
+  ArrowUpCircle,
   BarChart2,
   Check,
   ChevronRight,
@@ -11,6 +12,7 @@ import {
   Download,
   ExternalLink,
   Glasses,
+  Globe,
   Monitor,
   Share2,
   Smartphone,
@@ -64,7 +66,7 @@ type PackageInsight = {
 
 type EnrichedInsight = PackageInsight & {
   hasLiveData: boolean;
-  platforms?: { ios: boolean; android: boolean; web: boolean; tvos: boolean; visionos: boolean };
+  platforms?: { ios: boolean; android: boolean; web: boolean; tvos: boolean; visionos: boolean; windows: boolean };
   weekDownloads?: number;
   stars?: number;
   lastRelease?: string;
@@ -234,7 +236,7 @@ const enrich = (base: PackageInsight, live?: RNDirData): EnrichedInsight => {
     newArchitecture: live.newArchitecture ?? base.newArchitecture,
     expoCompatible: live.expoGo != null ? (live.expoGo || base.name.startsWith("expo-")) : base.expoCompatible,
     status: isUnmaintained && base.status === "Healthy" ? "Needs Review" : base.status,
-    platforms: { ios: live.ios ?? false, android: live.android ?? false, web: live.web ?? false, tvos: live.tvos ?? false, visionos: live.visionos ?? false },
+    platforms: { ios: live.ios ?? false, android: live.android ?? false, web: live.web ?? false, tvos: live.tvos ?? false, visionos: live.visionos ?? false, windows: live.windows ?? false },
     weekDownloads: live.npm?.weekDownloads,
     stars: live.github?.stats?.stars,
     lastRelease: live.npm?.latestRelease ?? live.github?.stats?.updatedAt,
@@ -287,9 +289,10 @@ const analyze = (payload: PackageJson, latestExpoMajor = 56) => {
   const expoInstalledMajor = majorOf(expoVersionRaw);
   const isExpoLatest = projectType === "Expo" && expoInstalledMajor !== null && expoInstalledMajor >= latestExpoMajor;
   const expoUpgradeNeeded = projectType === "Expo" && expoInstalledMajor !== null && expoInstalledMajor < latestExpoMajor;
+  const rnVersionRaw = deps["react-native"];
   const duplicates = detectDuplicates(entries.map((e) => e.name));
 
-  return { entries, depCount: Object.keys(payload.dependencies ?? {}).length, devDepCount: Object.keys(payload.devDependencies ?? {}).length, avgHealth, expoCompatPct, newArchPct, riskScore, recommendations, migrations, topHeavy, apkImpact, ipaImpact, risks, projectType, expoVersionRaw, expoInstalledMajor, latestExpoMajor, isExpoLatest, expoUpgradeNeeded, duplicates };
+  return { entries, depCount: Object.keys(payload.dependencies ?? {}).length, devDepCount: Object.keys(payload.devDependencies ?? {}).length, avgHealth, expoCompatPct, newArchPct, riskScore, recommendations, migrations, topHeavy, apkImpact, ipaImpact, risks, projectType, expoVersionRaw, expoInstalledMajor, latestExpoMajor, isExpoLatest, expoUpgradeNeeded, rnVersionRaw, duplicates };
 };
 
 type Analysis = ReturnType<typeof analyze>;
@@ -435,9 +438,14 @@ function DeepDivePanel({ pkg, onClose }: { pkg: EnrichedInsight | null; onClose:
                 </div>
               )}
 
-              <a href={`https://www.npmjs.com/package/${pkg.name}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
-                <ExternalLink size={14} /> View on npm
-              </a>
+              <div className="flex flex-wrap items-center gap-4">
+                <a href={`https://www.npmjs.com/package/${pkg.name}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                  <ExternalLink size={14} /> View on npm
+                </a>
+                <a href={`https://reactnative.directory/?search=${encodeURIComponent(pkg.name)}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline">
+                  <ExternalLink size={14} /> View on RN Directory
+                </a>
+              </div>
             </div>
           </>
         )}
@@ -484,6 +492,53 @@ function CompareRow({ label, va, vb, better }: { label: string; va: React.ReactN
       <td className={`py-2.5 px-3 text-sm text-center font-medium ${better === "a" ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>{va}</td>
       <td className={`py-2.5 px-3 text-sm text-center font-medium ${better === "b" ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"}`}>{vb}</td>
     </tr>
+  );
+}
+
+// ─── Platform icons (inline SVG brand marks) ──────────────────────────────────
+
+const AppleIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.52 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11"/>
+  </svg>
+);
+
+const AndroidIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+    <path d="M17.523 15.341A5.5 5.5 0 0 0 20 10.5a5.5 5.5 0 0 0-5.5-5.5 5.5 5.5 0 0 0-5.5 5.5 5.5 5.5 0 0 0 2.477 4.841L10 20h4l-.477-4.659ZM12 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm4 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/>
+    <path d="M7.5 9a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 1 0v-3a.5.5 0 0 0-.5-.5Zm9 0a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 1 0v-3a.5.5 0 0 0-.5-.5Z"/>
+    <path d="M8.5 3.5 7 2M15.5 3.5 17 2"/>
+    <circle cx="8.5" cy="3.5" r=".5"/><circle cx="15.5" cy="3.5" r=".5"/>
+  </svg>
+);
+
+const WindowsIcon = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+    <path d="M3 5.557 9.938 4.5v6.451H3V5.557ZM10.938 4.353 21 2.833V10.95h-10.062V4.353ZM3 11.969h6.938V18.5L3 17.443V11.97ZM10.938 12.087H21v8.083l-10.062-1.447V12.087Z"/>
+  </svg>
+);
+
+// ─── Platform Dot ─────────────────────────────────────────────────────────────
+
+const PLATFORM_COLORS: Record<string, string> = {
+  iOS:       "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400",
+  Android:   "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400",
+  Web:       "bg-sky-100 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400",
+  tvOS:      "bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400",
+  visionOS:  "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400",
+  Windows:   "bg-cyan-100 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400",
+  "Expo Go": "bg-orange-100 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400",
+};
+
+function PlatformDot({ v, label }: { v?: boolean; label?: string }) {
+  const color = label && PLATFORM_COLORS[label] ? PLATFORM_COLORS[label] : "bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400";
+  return (
+    <td className="py-2.5 px-4 text-center" title={label}>
+      {v
+        ? <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${color}`}>✓</span>
+        : <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted/50 text-muted-foreground/30 text-xs">✗</span>
+      }
+    </td>
   );
 }
 
@@ -554,6 +609,7 @@ export function PackageAnalyzer() {
 
   const [liveMap, setLiveMap] = useState<Record<string, RNDirData>>({});
   const [loadingLive, setLoadingLive] = useState(false);
+  const [latestRn, setLatestRn] = useState("0.78.0");
 
   const [selectedPkg, setSelectedPkg] = useState<EnrichedInsight | null>(null);
   const [compareSet, setCompareSet] = useState<Set<string>>(new Set());
@@ -570,6 +626,16 @@ export function PackageAnalyzer() {
     fetch("https://registry.npmjs.org/expo/latest", { signal: ctrl.signal })
       .then((r) => r.ok ? r.json() : null)
       .then((d: { version?: string } | null) => { const m = majorOf(d?.version); if (m) setLatestExpo(m); })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, []);
+
+  // Fetch latest React Native version
+  useEffect(() => {
+    const ctrl = new AbortController();
+    fetch("https://registry.npmjs.org/react-native/latest", { signal: ctrl.signal })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: { version?: string } | null) => { if (d?.version) setLatestRn(d.version); })
       .catch(() => {});
     return () => ctrl.abort();
   }, []);
@@ -718,23 +784,10 @@ export function PackageAnalyzer() {
     document.body.removeChild(ta);
   };
 
-  // Expo upgrade banner
-  let expoPanel: React.ReactNode = null;
-  if (analysis) {
-    if (analysis.projectType === "Expo") {
-      if (analysis.expoUpgradeNeeded) expoPanel = <div className="rounded-2xl border border-amber-300/70 bg-amber-100/60 px-4 py-3 text-amber-900 dark:border-amber-400/40 dark:bg-amber-500/10 dark:text-amber-200">Expo SDK is behind. Upgrade from SDK {analysis.expoInstalledMajor} → SDK {analysis.latestExpoMajor}.</div>;
-      else if (analysis.isExpoLatest) expoPanel = <div className="rounded-2xl border border-emerald-300/70 bg-emerald-100/60 px-4 py-3 text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/10 dark:text-emerald-200">Expo SDK is up to date (SDK {analysis.latestExpoMajor}).</div>;
-      else expoPanel = <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3 text-muted-foreground">Expo detected but version format could not be parsed automatically.</div>;
-    } else if (analysis.projectType === "React Native") {
-      expoPanel = <div className="rounded-2xl border border-sky-300/70 bg-sky-100/60 px-4 py-3 text-sky-900 dark:border-sky-400/40 dark:bg-sky-500/10 dark:text-sky-200">React Native project without Expo. SDK upgrade check applies to Expo projects only.</div>;
-    } else {
-      expoPanel = <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3 text-muted-foreground">Could not identify Expo or React Native dependencies.</div>;
-    }
-  }
-
   const hasResolved = Object.keys(resolvedVers).length > 0;
   const hasSize = topBySize.length > 0;
   const hasDl = topByDl.length > 0;
+  const hasPlatform = platformPkgs.length > 0;
 
   return (
     <section id="analyzer" className="mx-auto max-w-6xl py-12 sm:py-16">
@@ -845,19 +898,98 @@ export function PackageAnalyzer() {
             </div>
           </div>
 
-          {/* Expo SDK Check */}
+          {/* Upgrade Manager */}
           <Card className="ai-panel mt-8 border-border/70 bg-card/90">
-            <CardHeader><CardTitle className="text-xl">Expo SDK Upgrade Check</CardTitle></CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="grid gap-4 sm:grid-cols-3">
-                {[{ label: "Project Type", value: analysis.projectType }, { label: "Installed Expo", value: analysis.expoVersionRaw ?? "Not installed" }, { label: "Latest Expo SDK", value: analysis.latestExpoMajor }].map(({ label, value }) => (
-                  <div key={label} className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
-                    <p className="mt-2 text-base font-semibold text-foreground">{value}</p>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <ArrowUpCircle size={20} className="text-primary" />
+                Upgrade Manager
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Step-by-step upgrade paths for Expo SDK and React Native.</p>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              {/* Expo Upgrade Panel — only for Expo projects */}
+              {analysis.projectType === "Expo" && (() => {
+                const from = analysis.expoInstalledMajor;
+                const to = analysis.latestExpoMajor;
+                const isLatest = from !== null && from >= to;
+                const upgradeUrl = from ? `https://docs.expo.dev/bare/upgrade/?fromSdk=${from}&toSdk=${to}` : "https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/";
+                return (
+                  <div className={`rounded-2xl border p-4 ${isLatest ? "border-emerald-300/70 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/10" : "border-amber-300/70 bg-amber-50/60 dark:border-amber-400/40 dark:bg-amber-500/10"}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">⚡</span>
+                        <div>
+                          <p className="font-semibold text-foreground">Expo SDK</p>
+                          <p className="text-sm text-muted-foreground">
+                            {from ? `SDK ${from}` : "Not detected"} → <span className="font-semibold text-foreground">SDK {to}</span>
+                          </p>
+                        </div>
+                        {isLatest
+                          ? <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">✓ Up to date</Badge>
+                          : <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">Upgrade available</Badge>}
+                      </div>
+                      <a href={upgradeUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted">
+                        <ExternalLink size={14} />
+                        {isLatest ? "View Changelog" : `Upgrade SDK ${from} → ${to}`}
+                      </a>
+                    </div>
+                    {!isLatest && from && (
+                      <div className="mt-3 space-y-1.5 rounded-xl bg-background/60 p-3 text-xs text-muted-foreground">
+                        <p className="font-semibold text-foreground">Upgrade steps:</p>
+                        <p>1. Run <code className="rounded bg-muted px-1 py-0.5 font-mono">npx expo install expo@~{to}.0.0</code></p>
+                        <p>2. Run <code className="rounded bg-muted px-1 py-0.5 font-mono">npx expo-doctor</code> to check compatibility</p>
+                        <p>3. Follow the official upgrade guide linked above</p>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-              {expoPanel}
+                );
+              })()}
+
+              {/* React Native Upgrade Panel — only for bare RN CLI projects */}
+              {analysis.projectType === "React Native" && (() => {
+                const fromRaw = analysis.rnVersionRaw?.replace(/[^0-9.]/g, "");
+                const isLatest = fromRaw === latestRn;
+                const upgradeUrl = fromRaw
+                  ? `https://react-native-community.github.io/upgrade-helper/?from=${fromRaw}&to=${latestRn}`
+                  : "https://react-native-community.github.io/upgrade-helper/";
+                return (
+                  <div className={`rounded-2xl border p-4 ${isLatest ? "border-emerald-300/70 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/10" : "border-sky-300/70 bg-sky-50/60 dark:border-sky-400/40 dark:bg-sky-500/10"}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">📱</span>
+                        <div>
+                          <p className="font-semibold text-foreground">React Native</p>
+                          <p className="text-sm text-muted-foreground">
+                            {fromRaw ? `v${fromRaw}` : "Not detected"} → <span className="font-semibold text-foreground">v{latestRn}</span>
+                          </p>
+                        </div>
+                        {isLatest
+                          ? <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">✓ Up to date</Badge>
+                          : <Badge className="bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300">Upgrade available</Badge>}
+                      </div>
+                      <a href={upgradeUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-border/70 bg-background px-4 py-2 text-sm font-medium text-foreground shadow-sm transition hover:bg-muted">
+                        <ExternalLink size={14} />
+                        {isLatest ? "View Upgrade Helper" : `Open Upgrade Helper`}
+                      </a>
+                    </div>
+                    {!isLatest && fromRaw && (
+                      <div className="mt-3 space-y-1.5 rounded-xl bg-background/60 p-3 text-xs text-muted-foreground">
+                        <p className="font-semibold text-foreground">Upgrade steps:</p>
+                        <p>1. Use the <strong>Upgrade Helper</strong> link above to see every file diff</p>
+                        <p>2. Run <code className="rounded bg-muted px-1 py-0.5 font-mono">npx react-native upgrade</code> or apply diffs manually</p>
+                        <p>3. Update native iOS/Android files as instructed in the diff</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {analysis.projectType === "Unknown" && (
+                <p className="text-sm text-muted-foreground">Could not detect Expo or React Native version. Ensure your package.json includes <code className="font-mono">expo</code> or <code className="font-mono">react-native</code> in dependencies.</p>
+              )}
             </CardContent>
           </Card>
 
@@ -1001,7 +1133,15 @@ export function PackageAnalyzer() {
                     <thead>
                       <tr className="border-b border-border/50">
                         <th className="py-3 px-4 text-left font-semibold text-muted-foreground">Package</th>
-                        {[["iOS", <Smartphone key="ios" size={13} />], ["Android", <Smartphone key="and" size={13} />], ["Web", <Monitor key="web" size={13} />], ["tvOS", <Tv key="tv" size={13} />], ["visionOS", <Glasses key="vis" size={13} />], ["Expo Go", null]].map(([label, Icon]) => (
+                        {[
+                          ["iOS",      <AppleIcon key="ios" />],
+                          ["Android",  <AndroidIcon key="and" />],
+                          ["Web",      <Globe key="web" size={13} />],
+                          ["tvOS",     <Tv key="tv" size={13} />],
+                          ["visionOS", <Glasses key="vis" size={13} />],
+                          ["Windows",  <WindowsIcon key="win" />],
+                          ["Expo Go",  null],
+                        ].map(([label, Icon]) => (
                           <th key={String(label)} className="py-3 px-4 text-center font-semibold text-muted-foreground">
                             <span className="flex items-center justify-center gap-1">{Icon}{String(label)}</span>
                           </th>
@@ -1009,20 +1149,18 @@ export function PackageAnalyzer() {
                       </tr>
                     </thead>
                     <tbody>
-                      {platformPkgs.map((pkg) => {
-                        const Dot = ({ v }: { v?: boolean }) => <td className="py-2.5 px-4 text-center">{v ? <span className="text-emerald-500">✓</span> : <span className="text-muted-foreground/30">✗</span>}</td>;
-                        return (
-                          <tr key={pkg.name} className="border-b border-border/30 hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => setSelectedPkg(pkg)}>
-                            <td className="py-2.5 px-4 text-xs font-medium text-foreground">{pkg.name}</td>
-                            <Dot v={pkg.platforms?.ios} />
-                            <Dot v={pkg.platforms?.android} />
-                            <Dot v={pkg.platforms?.web} />
-                            <Dot v={pkg.platforms?.tvos} />
-                            <Dot v={pkg.platforms?.visionos} />
-                            <Dot v={pkg.expoGo} />
-                          </tr>
-                        );
-                      })}
+                      {platformPkgs.map((pkg) => (
+                        <tr key={pkg.name} className="border-b border-border/30 hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => setSelectedPkg(pkg)}>
+                          <td className="py-2.5 px-4 text-xs font-medium text-foreground max-w-[160px] truncate">{pkg.name}</td>
+                          <PlatformDot v={pkg.platforms?.ios} label="iOS" />
+                          <PlatformDot v={pkg.platforms?.android} label="Android" />
+                          <PlatformDot v={pkg.platforms?.web} label="Web" />
+                          <PlatformDot v={pkg.platforms?.tvos} label="tvOS" />
+                          <PlatformDot v={pkg.platforms?.visionos} label="visionOS" />
+                          <PlatformDot v={pkg.platforms?.windows} label="Windows" />
+                          <PlatformDot v={pkg.expoGo ?? undefined} label="Expo Go" />
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1115,6 +1253,12 @@ export function PackageAnalyzer() {
                       <SortHead col="healthScore" label="Health" sortCol={sortCol} setSortCol={setSortCol} />
                       <TableHead>Expo Go</TableHead>
                       <TableHead>New Arch</TableHead>
+                      {hasPlatform && <TableHead className="text-center"><span className="flex items-center justify-center gap-1"><AppleIcon />iOS</span></TableHead>}
+                      {hasPlatform && <TableHead className="text-center"><span className="flex items-center justify-center gap-1"><AndroidIcon />Android</span></TableHead>}
+                      {hasPlatform && <TableHead className="text-center"><span className="flex items-center justify-center gap-1"><Globe size={12} />Web</span></TableHead>}
+                      {hasPlatform && <TableHead className="text-center">tvOS</TableHead>}
+                      {hasPlatform && <TableHead className="text-center">visionOS</TableHead>}
+                      {hasPlatform && <TableHead className="text-center"><span className="flex items-center justify-center gap-1"><WindowsIcon />Win</span></TableHead>}
                       <TableHead>Bundle</TableHead>
                       {hasSize && <TableHead>npm Size</TableHead>}
                       {hasDl && <TableHead>Downloads</TableHead>}
@@ -1125,11 +1269,11 @@ export function PackageAnalyzer() {
                   </TableHeader>
                   <TableBody>
                     {filtered.map((item) => (
-                      <TableRow key={item.name} className="cursor-pointer hover:bg-muted/30 transition-colors">
+                      <TableRow key={item.name} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedPkg(item)}>
                         <TableCell onClick={(e) => { e.stopPropagation(); toggleCompare(item.name); }}>
                           <input type="checkbox" readOnly checked={compareSet.has(item.name)} className="cursor-pointer accent-primary" aria-label={`Compare ${item.name}`} />
                         </TableCell>
-                        <TableCell className="font-medium text-foreground" onClick={() => setSelectedPkg(item)}>
+                        <TableCell className="font-medium text-foreground">
                           <span className="flex items-center gap-1">{item.name}<ChevronRight size={12} className="text-muted-foreground opacity-50" /></span>
                         </TableCell>
                         <TableCell className="font-mono text-xs">{item.version}</TableCell>
@@ -1138,6 +1282,12 @@ export function PackageAnalyzer() {
                         <TableCell>{item.healthScore}/100 <span className="text-xs text-muted-foreground">({item.healthGrade})</span></TableCell>
                         <TableCell>{item.hasLiveData ? (item.expoGo ? <span className="text-emerald-500">✓</span> : <span className="text-muted-foreground/40">✗</span>) : <span className="text-muted-foreground/40">—</span>}</TableCell>
                         <TableCell>{item.newArchitecture ? <span className="text-emerald-500">✓</span> : <span className="text-muted-foreground/40">✗</span>}</TableCell>
+                        {hasPlatform && <TableCell className="text-center">{item.platforms ? (item.platforms.ios ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold">✓</span> : <span className="text-muted-foreground/30 text-xs">✗</span>) : <span className="text-muted-foreground/20 text-xs">—</span>}</TableCell>}
+                        {hasPlatform && <TableCell className="text-center">{item.platforms ? (item.platforms.android ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 text-xs font-bold">✓</span> : <span className="text-muted-foreground/30 text-xs">✗</span>) : <span className="text-muted-foreground/20 text-xs">—</span>}</TableCell>}
+                        {hasPlatform && <TableCell className="text-center">{item.platforms ? (item.platforms.web ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 text-xs font-bold">✓</span> : <span className="text-muted-foreground/30 text-xs">✗</span>) : <span className="text-muted-foreground/20 text-xs">—</span>}</TableCell>}
+                        {hasPlatform && <TableCell className="text-center">{item.platforms ? (item.platforms.tvos ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 text-xs font-bold">✓</span> : <span className="text-muted-foreground/30 text-xs">✗</span>) : <span className="text-muted-foreground/20 text-xs">—</span>}</TableCell>}
+                        {hasPlatform && <TableCell className="text-center">{item.platforms ? (item.platforms.visionos ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-bold">✓</span> : <span className="text-muted-foreground/30 text-xs">✗</span>) : <span className="text-muted-foreground/20 text-xs">—</span>}</TableCell>}
+                        {hasPlatform && <TableCell className="text-center">{item.platforms ? (item.platforms.windows ? <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-xs font-bold">✓</span> : <span className="text-muted-foreground/30 text-xs">✗</span>) : <span className="text-muted-foreground/20 text-xs">—</span>}</TableCell>}
                         <TableCell><Badge className={IMPACT_STYLES[item.bundleImpact]}>{item.bundleImpact}</Badge></TableCell>
                         {hasSize && <TableCell className="text-xs text-muted-foreground">{formatBytes(item.npmSize)}</TableCell>}
                         {hasDl && <TableCell className="text-xs text-muted-foreground">{formatDownloads(item.weekDownloads)}</TableCell>}
