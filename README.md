@@ -1,7 +1,8 @@
-
 # Package Intelligence
 
 **Package Intelligence** is a modern web app for analyzing React Native and Expo dependencies from a `package.json` file, surfacing actionable upgrade intelligence, and providing deep insights into your project's health, risk, and migration opportunities.
+
+# [![Package Intelligence - React Native & Expo Dependency Insights | Product Hunt](https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1159438&theme=light)](https://www.producthunt.com/products/package-intelligence?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-package-intelligence)
 
 ---
 
