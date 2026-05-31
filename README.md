@@ -1,4 +1,10 @@
-# Package Intelligence
+
+<p align="center">
+  <img src="public/animated-hero.svg" alt="Animated Package Intelligence Hero" width="400" height="180"/>
+</p>
+
+
+<h1 align="center">Package Intelligence</h1>
 
 **Package Intelligence** is a modern web app for analyzing React Native and Expo dependencies from a `package.json` file, surfacing actionable upgrade intelligence, and providing deep insights into your project's health, risk, and migration opportunities.
 
