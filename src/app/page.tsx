@@ -163,7 +163,6 @@ export default async function Home() {
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-3 px-6 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:px-8">
           <span>package-intelligence © 2026</span>
           <div className="flex items-center gap-4">
-
             <a
               href="https://www.producthunt.com/products/package-intelligence?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-package-intelligence"
               target="_blank"
@@ -171,13 +170,19 @@ export default async function Home() {
               aria-label="Product Hunt badge"
               className="focus:outline-none"
             >
+              {/* Light mode badge */}
               <img
-                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1159438&theme=light&t=1780230186278"
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1159438&theme=light"
                 alt="Package Intelligence - React Native & Expo Dependency Insights | Product Hunt"
-                width={140}
-                height={30}
-                style={{ width: "140px", height: "30px" }}
                 className="block dark:hidden"
+                style={{ maxWidth: "140px", height: "auto" }}
+              />
+              {/* Dark mode badge */}
+              <img
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1159438&theme=dark"
+                alt="Package Intelligence - React Native & Expo Dependency Insights | Product Hunt"
+                className="hidden dark:block"
+                style={{ maxWidth: "140px", height: "auto" }}
               />
             </a>
             <a
