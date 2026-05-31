@@ -41,16 +41,15 @@ async function getStarCountLabel() {
     apiHeaders.Authorization = `Bearer ${token}`;
   }
 
+
   try {
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
       headers: apiHeaders,
       next: { revalidate: 3600 },
     });
-
     if (!response.ok) {
       throw new Error("GitHub API request failed");
     }
-
     const data = (await response.json()) as { stargazers_count?: number };
     if (typeof data.stargazers_count === "number") {
       return formatStarCount(data.stargazers_count);
@@ -105,7 +104,19 @@ export default async function Home() {
               priority
             />
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
+            <a 
+              href="https://www.producthunt.com/products/package-intelligence?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-package-intelligence"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img 
+                alt="Package Intelligence - React Native & Expo Dependency Insights | Product Hunt"
+                width={140}
+                height={30}
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1159438&theme=light&t=1780230186278"
+              />
+            </a>
             <a
               href={repoUrl}
               target="_blank"
@@ -165,27 +176,19 @@ export default async function Home() {
           <div className="flex items-center gap-4">
 
             <a
-              href="https://www.producthunt.com/products/package-intelligence?utm_source=badge-follow&utm_medium=badge&utm_source=badge-package-intelligence"
+              href="https://www.producthunt.com/products/package-intelligence?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-package-intelligence"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Product Hunt badge"
               className="focus:outline-none"
             >
               <img
-                src="https://api.producthunt.com/widgets/embed-image/v1/follow.svg?product_id=1236560&theme=light"
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1159438&theme=light&t=1780230186278"
                 alt="Package Intelligence - React Native & Expo Dependency Insights | Product Hunt"
                 width={140}
                 height={30}
                 style={{ width: "140px", height: "30px" }}
                 className="block dark:hidden"
-              />
-              <img
-                src="https://api.producthunt.com/widgets/embed-image/v1/follow.svg?product_id=1236560&theme=dark"
-                alt="Package Intelligence - React Native & Expo Dependency Insights | Product Hunt"
-                width={140}
-                height={30}
-                style={{ width: "140px", height: "30px" }}
-                className="hidden dark:block"
               />
             </a>
             <a
