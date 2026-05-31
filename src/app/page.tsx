@@ -105,18 +105,7 @@ export default async function Home() {
             />
           </Link>
           <div className="flex items-center gap-4">
-            <a 
-              href="https://www.producthunt.com/products/package-intelligence?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-package-intelligence"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <img 
-                alt="Package Intelligence - React Native & Expo Dependency Insights | Product Hunt"
-                width={140}
-                height={30}
-                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1159438&theme=light&t=1780230186278"
-              />
-            </a>
+        
             <a
               href={repoUrl}
               target="_blank"
