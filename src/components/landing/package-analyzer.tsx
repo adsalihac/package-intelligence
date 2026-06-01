@@ -88,6 +88,16 @@ type PackageJson = {
   devDependencies?: Record<string, string>;
 };
 
+type SurviveReport = {
+  packageName: string;
+  lastRelease?: string;
+  contributorCount: number | null;
+  busFactor: number | null;
+  riskLevel: RiskLevel;
+  riskScore: number;
+  repo?: { owner: string; repo: string };
+};
+
 type ProjectType = "Expo" | "React Native" | "Unknown";
 type DuplicateGroup = { category: string; packages: string[] };
 
@@ -729,6 +739,10 @@ export function PackageAnalyzer() {
   const [tableTab, setTableTab] = useState("all");
   const [copied, setCopied] = useState(false);
   const [resolvedVers, setResolvedVers] = useState<Record<string, string>>({});
+  const [surviveName, setSurviveName] = useState("");
+  const [surviveLoading, setSurviveLoading] = useState(false);
+  const [surviveError, setSurviveError] = useState<string | null>(null);
+  const [surviveReport, setSurviveReport] = useState<SurviveReport | null>(null);
 
   // Fetch latest expo version
   useEffect(() => {
@@ -806,6 +820,40 @@ export function PackageAnalyzer() {
     if (!Object.keys(resolved).length) setLockError("Could not parse lock file. Only package-lock.json (v2/v3) is supported.");
     else { setResolvedVers(resolved); setLockError(null); }
   };
+
+  const checkSurvivability = useCallback(async () => {
+    const name = surviveName.trim();
+    if (!name) {
+      setSurviveError("Enter an npm package name.");
+      setSurviveReport(null);
+      return;
+    }
+
+    setSurviveLoading(true);
+    setSurviveError(null);
+
+    try {
+      const response = await fetch(`/api/survive?package=${encodeURIComponent(name)}`);
+      const data = (await response.json()) as SurviveReport | { error?: string };
+
+      if (!response.ok) {
+        setSurviveReport(null);
+        const message =
+          typeof data === "object" && data !== null && "error" in data
+            ? data.error
+            : undefined;
+        setSurviveError(message ?? "Could not analyze this package.");
+        return;
+      }
+
+      setSurviveReport(data as SurviveReport);
+    } catch {
+      setSurviveReport(null);
+      setSurviveError("Failed to fetch survivability report.");
+    } finally {
+      setSurviveLoading(false);
+    }
+  }, [surviveName]);
 
   const enriched = useMemo<EnrichedInsight[]>(() => {
     if (!analysis) return [];
@@ -986,6 +1034,56 @@ export function PackageAnalyzer() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="ai-panel mt-8 border-border/70 bg-card/90">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <AlertTriangle size={20} className="text-amber-500" />
+            Will This Package Survive?
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Paste an npm package name to check release recency, bus factor, contributors, and risk level.</p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Input
+              value={surviveName}
+              onChange={(e) => setSurviveName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") void checkSurvivability(); }}
+              placeholder="e.g. react-native-camera"
+              className="sm:max-w-md"
+            />
+            <Button size="sm" onClick={() => void checkSurvivability()} disabled={surviveLoading}>
+              {surviveLoading ? "Checking..." : "Check package"}
+            </Button>
+          </div>
+
+          {surviveError && <p className="text-sm text-rose-500">{surviveError}</p>}
+
+          {surviveReport && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Last Release</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{formatRelativeDate(surviveReport.lastRelease)}</p>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Bus Factor</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{surviveReport.busFactor ?? "—"}</p>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Contributors</p>
+                <p className="mt-1 text-lg font-semibold text-foreground">{surviveReport.contributorCount ?? "—"}</p>
+              </div>
+              <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Risk Level</p>
+                <div className="mt-1 flex items-center gap-2">
+                  <Badge className={RISK_LEVEL_STYLES[surviveReport.riskLevel]}>{surviveReport.riskLevel}</Badge>
+                  <span className="text-sm font-medium text-foreground">{surviveReport.riskScore}/100</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
 
       {analysis && (
