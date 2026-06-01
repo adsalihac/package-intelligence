@@ -1,6 +1,7 @@
 export type RNDirData = {
   npmPkg: string;
   github?: {
+    isArchived?: boolean;
     stats?: {
       updatedAt?: string;
       stars?: number;
@@ -22,6 +23,9 @@ export type RNDirData = {
   visionos?: boolean;
   windows?: boolean;
   unmaintained?: boolean;
+  unmaintainedReason?: string;
+  deprecated?: boolean;
+  deprecatedMessage?: string;
   alternatives?: string[];
 };
 

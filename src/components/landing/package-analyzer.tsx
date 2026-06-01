@@ -13,7 +13,6 @@ import {
   ExternalLink,
   Glasses,
   Globe,
-  Monitor,
   Share2,
   Smartphone,
   Star,
@@ -49,6 +48,7 @@ import { SAMPLE_PACKAGE_JSON } from "@/lib/sample-package";
 type PackageCategory = "Dependency" | "Dev Dependency";
 type BundleImpact = "Low" | "Medium" | "High";
 type PackageStatus = "Healthy" | "Needs Review" | "Deprecated" | "Archived" | "Outdated";
+type RiskLevel = "Low" | "Medium" | "High";
 type Better = "a" | "b" | "equal" | "none";
 
 type PackageInsight = {
@@ -75,6 +75,12 @@ type EnrichedInsight = PackageInsight & {
   rnAlternatives?: string[];
   expoGo?: boolean;
   isUnmaintained?: boolean;
+  unmaintainedReason?: string;
+  isDeprecated?: boolean;
+  deprecatedMessage?: string;
+  isArchived?: boolean;
+  deathRiskScore?: number;
+  deathRiskLevel?: RiskLevel;
 };
 
 type PackageJson = {
@@ -141,6 +147,12 @@ const IMPACT_STYLES: Record<BundleImpact, string> = {
   High: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-400/15 dark:text-rose-200",
 };
 
+const RISK_LEVEL_STYLES: Record<RiskLevel, string> = {
+  Low: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-200",
+  Medium: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/15 dark:text-amber-200",
+  High: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-400/15 dark:text-rose-200",
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const grade = (s: number) =>
@@ -150,6 +162,9 @@ const hash = (v: string) =>
   Array.from(v).reduce((a, c) => (a + c.charCodeAt(0) * 7) % 100, 0);
 
 const impactScore = (i: BundleImpact) => (i === "High" ? 3 : i === "Medium" ? 2 : 1);
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
 
 const majorOf = (v?: string) => {
   if (!v) return null;
@@ -223,11 +238,64 @@ const buildBase = (name: string, version: string, category: PackageCategory): Pa
 };
 
 const enrich = (base: PackageInsight, live?: RNDirData): EnrichedInsight => {
-  if (!live) return { ...base, hasLiveData: false };
+  if (!live) {
+    const fallbackRiskScore = base.status === "Deprecated"
+      ? 72
+      : base.status === "Archived"
+      ? 82
+      : base.status === "Needs Review"
+      ? 48
+      : base.status === "Outdated"
+      ? 30
+      : 8;
+    return {
+      ...base,
+      hasLiveData: false,
+      isUnmaintained: false,
+      isDeprecated: base.status === "Deprecated",
+      isArchived: base.status === "Archived",
+      deathRiskScore: fallbackRiskScore,
+      deathRiskLevel: fallbackRiskScore >= 70 ? "High" : fallbackRiskScore >= 35 ? "Medium" : "Low",
+    };
+  }
+
+  const isArchived = live.github?.isArchived ?? false;
+  const isDeprecated = live.deprecated ?? base.status === "Deprecated";
   const isUnmaintained = live.unmaintained ?? false;
+
+  let deathRiskScore = 0;
+  if (isArchived) deathRiskScore += 62;
+  if (isDeprecated) deathRiskScore += 46;
+  if (isUnmaintained) deathRiskScore += 34;
+  if (base.bundleImpact === "High") deathRiskScore += 8;
+  if (base.status === "Needs Review") deathRiskScore += 12;
+  if (base.status === "Outdated") deathRiskScore += 6;
+  deathRiskScore = clamp(deathRiskScore, 0, 100);
+
+  const deathRiskLevel: RiskLevel = deathRiskScore >= 70 ? "High" : deathRiskScore >= 35 ? "Medium" : "Low";
+
   let hs = base.healthScore;
   if (live.score !== undefined) hs = Math.round((hs + Math.round(live.score * 100)) / 2);
   if (isUnmaintained) hs = Math.min(hs, 35);
+  if (isDeprecated) hs = Math.min(hs, 30);
+  if (isArchived) hs = Math.min(hs, 24);
+
+  const nextStatus: PackageStatus = isArchived
+    ? "Archived"
+    : isDeprecated
+    ? "Deprecated"
+    : isUnmaintained && base.status === "Healthy"
+    ? "Needs Review"
+    : base.status;
+
+  const recommendation = isArchived
+    ? "Replace archived package with an active alternative"
+    : isDeprecated
+    ? "Migrate away from deprecated package"
+    : isUnmaintained
+    ? "Audit maintenance signals and prepare fallback"
+    : base.recommendation;
+
   return {
     ...base,
     healthScore: hs,
@@ -235,7 +303,8 @@ const enrich = (base: PackageInsight, live?: RNDirData): EnrichedInsight => {
     hasLiveData: true,
     newArchitecture: live.newArchitecture ?? base.newArchitecture,
     expoCompatible: live.expoGo != null ? (live.expoGo || base.name.startsWith("expo-")) : base.expoCompatible,
-    status: isUnmaintained && base.status === "Healthy" ? "Needs Review" : base.status,
+    status: nextStatus,
+    recommendation,
     platforms: { ios: live.ios ?? false, android: live.android ?? false, web: live.web ?? false, tvos: live.tvos ?? false, visionos: live.visionos ?? false, windows: live.windows ?? false },
     weekDownloads: live.npm?.weekDownloads,
     stars: live.github?.stats?.stars,
@@ -245,6 +314,33 @@ const enrich = (base: PackageInsight, live?: RNDirData): EnrichedInsight => {
     rnAlternatives: live.alternatives,
     expoGo: live.expoGo,
     isUnmaintained,
+    unmaintainedReason: live.unmaintainedReason,
+    isDeprecated,
+    deprecatedMessage: live.deprecatedMessage,
+    isArchived,
+    deathRiskScore,
+    deathRiskLevel,
+  };
+};
+
+const summarizeDeathChecker = (items: EnrichedInsight[]) => {
+  const archived = items.filter((i) => i.isArchived).length;
+  const deprecated = items.filter((i) => i.isDeprecated).length;
+  const unmaintained = items.filter((i) => i.isUnmaintained).length;
+  const total = items.length || 1;
+  const avgRisk = Math.round(
+    items.reduce((acc, item) => acc + (item.deathRiskScore ?? 0), 0) / total
+  );
+  const healthScore = clamp(100 - avgRisk, 0, 100);
+  const riskLevel: RiskLevel = avgRisk >= 70 ? "High" : avgRisk >= 35 ? "Medium" : "Low";
+
+  return {
+    archived,
+    deprecated,
+    unmaintained,
+    avgRisk,
+    healthScore,
+    riskLevel,
   };
 };
 
@@ -298,6 +394,7 @@ const analyze = (payload: PackageJson, latestExpoMajor = 56) => {
 type Analysis = ReturnType<typeof analyze>;
 
 const toMarkdown = (a: Analysis, enriched: EnrichedInsight[]) => {
+  const death = summarizeDeathChecker(enriched);
   const lines = [
     "# Package Intelligence Report",
     "",
@@ -311,11 +408,22 @@ const toMarkdown = (a: Analysis, enriched: EnrichedInsight[]) => {
     `| Dev Dependencies | ${a.devDepCount} |`,
     `| Health Score | ${a.avgHealth}/100 |`,
     `| Risk Score | ${a.riskScore} |`,
+    `| Dependency Death Risk | ${death.avgRisk}/100 (${death.riskLevel}) |`,
+    `| Dependency Health Report | ${death.healthScore}/100 |`,
     `| Expo Compatibility | ${a.expoCompatPct}% |`,
     `| New Architecture | ${a.newArchPct}% |`,
     `| Project Type | ${a.projectType} |`,
     "",
   ];
+  lines.push(
+    "## Dependency Death Checker",
+    "",
+    `- Archived packages: **${death.archived}**`,
+    `- Deprecated packages: **${death.deprecated}**`,
+    `- Unmaintained packages: **${death.unmaintained}**`,
+    `- Risk score: **${death.avgRisk}/100 (${death.riskLevel})**`,
+    ""
+  );
   if (a.migrations.length) {
     lines.push("## Expo Migration Opportunities", "");
     a.migrations.forEach((m) => lines.push(`- **${m.current}** → \`${m.alternative}\``));
@@ -383,6 +491,8 @@ function DeepDivePanel({ pkg, onClose }: { pkg: EnrichedInsight | null; onClose:
                     <div><p className="text-xs text-muted-foreground">npm Size</p><p className="font-semibold text-foreground">{formatBytes(pkg.npmSize)}</p></div>
                     {pkg.rnScore !== undefined && <div><p className="text-xs text-muted-foreground">RN Directory Score</p><p className="font-semibold text-foreground">{Math.round(pkg.rnScore * 100)}/100</p></div>}
                     {pkg.isUnmaintained && <div className="col-span-2 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"><AlertTriangle size={14} /><span className="text-xs font-medium">Marked unmaintained</span></div>}
+                    {pkg.isArchived && <div className="col-span-2 flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300"><AlertTriangle size={14} /><span className="text-xs font-medium">Repository is archived</span></div>}
+                    {pkg.isDeprecated && <div className="col-span-2 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"><AlertTriangle size={14} /><span className="text-xs font-medium">Deprecated on npm{pkg.deprecatedMessage ? `: ${pkg.deprecatedMessage}` : ""}</span></div>}
                   </div>
                 </div>
               )}
@@ -722,6 +832,7 @@ export function PackageAnalyzer() {
   const topBySize = useMemo(() => [...enriched].filter((e) => (e.npmSize ?? 0) > 0).sort((a, b) => (b.npmSize ?? 0) - (a.npmSize ?? 0)).slice(0, 8), [enriched]);
   const topByDl = useMemo(() => [...enriched].filter((e) => (e.weekDownloads ?? 0) > 0).sort((a, b) => (b.weekDownloads ?? 0) - (a.weekDownloads ?? 0)).slice(0, 8), [enriched]);
   const platformPkgs = useMemo(() => enriched.filter((e) => e.platforms), [enriched]);
+  const deathChecker = useMemo(() => summarizeDeathChecker(enriched), [enriched]);
 
   const compareItems = useMemo((): [EnrichedInsight, EnrichedInsight] | null => {
     const [n1, n2] = Array.from(compareSet);
@@ -861,7 +972,8 @@ export function PackageAnalyzer() {
                 { label: "Dependencies", value: analysis.depCount },
                 { label: "Dev Dependencies", value: analysis.devDepCount },
                 { label: "Health Score", value: `${analysis.avgHealth}/100` },
-                { label: "Risk Score", value: analysis.riskScore },
+                { label: "Dependency Death Risk", value: `${deathChecker.avgRisk}/100 (${deathChecker.riskLevel})` },
+                { label: "Health Report", value: `${deathChecker.healthScore}/100` },
                 { label: "Expo Compatibility", value: `${analysis.expoCompatPct}%` },
                 { label: "New Architecture Ready", value: `${analysis.newArchPct}%` },
               ].map(({ label, value }) => (
@@ -970,6 +1082,69 @@ export function PackageAnalyzer() {
 
               {analysis.projectType === "Unknown" && (
                 <p className="text-sm text-muted-foreground">Could not detect Expo or React Native version. Ensure your package.json includes <code className="font-mono">expo</code> or <code className="font-mono">react-native</code> in dependencies.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Dependency Death Checker */}
+          <Card className="ai-panel mt-8 border-border/70 bg-card/90">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <AlertTriangle size={20} className="text-rose-500" />
+                Dependency Death Checker
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Paste package.json to detect archived, unmaintained, and deprecated packages with a project-wide risk score.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Archived</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{deathChecker.archived}</p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Unmaintained</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{deathChecker.unmaintained}</p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Deprecated</p>
+                  <p className="mt-1 text-2xl font-semibold text-foreground">{deathChecker.deprecated}</p>
+                </div>
+                <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Risk Score</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-2xl font-semibold text-foreground">{deathChecker.avgRisk}/100</p>
+                    <Badge className={RISK_LEVEL_STYLES[deathChecker.riskLevel]}>{deathChecker.riskLevel}</Badge>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border/70 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                Health report score: <span className="font-semibold text-foreground">{deathChecker.healthScore}/100</span>
+              </div>
+
+              {enriched.filter((item) => (item.deathRiskLevel ?? "Low") === "High").length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-foreground">Highest risk dependencies</p>
+                  {enriched
+                    .filter((item) => (item.deathRiskLevel ?? "Low") === "High")
+                    .sort((a, b) => (b.deathRiskScore ?? 0) - (a.deathRiskScore ?? 0))
+                    .slice(0, 5)
+                    .map((item) => (
+                      <button
+                        key={item.name}
+                        onClick={() => setSelectedPkg(item)}
+                        className="flex w-full items-center justify-between rounded-2xl border border-border/70 bg-muted/55 px-3 py-2 text-left text-sm transition hover:bg-muted/70"
+                      >
+                        <span className="font-medium text-foreground">{item.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">{item.deathRiskScore ?? 0}/100</span>
+                          <Badge className={RISK_LEVEL_STYLES[item.deathRiskLevel ?? "Low"]}>{item.deathRiskLevel ?? "Low"}</Badge>
+                        </div>
+                      </button>
+                    ))}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -1273,6 +1448,8 @@ export function PackageAnalyzer() {
                       {hasSize && <TableHead>npm Size</TableHead>}
                       {hasDl && <TableHead>Downloads</TableHead>}
                       {hasDl && <TableHead>Last Release</TableHead>}
+                      <TableHead>Death Risk</TableHead>
+                      <TableHead>Flags</TableHead>
                       <SortHead col="status" label="Status" sortCol={sortCol} setSortCol={setSortCol} />
                       <TableHead>Recommendation</TableHead>
                     </TableRow>
@@ -1302,6 +1479,14 @@ export function PackageAnalyzer() {
                         {hasSize && <TableCell className="text-xs text-muted-foreground">{formatBytes(item.npmSize)}</TableCell>}
                         {hasDl && <TableCell className="text-xs text-muted-foreground">{formatDownloads(item.weekDownloads)}</TableCell>}
                         {hasDl && <TableCell className="text-xs text-muted-foreground">{formatRelativeDate(item.lastRelease)}</TableCell>}
+                        <TableCell>
+                          <Badge className={RISK_LEVEL_STYLES[item.deathRiskLevel ?? "Low"]}>
+                            {(item.deathRiskScore ?? 0)}/100
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {[item.isArchived ? "Archived" : null, item.isDeprecated ? "Deprecated" : null, item.isUnmaintained ? "Unmaintained" : null].filter(Boolean).join(" · ") || "Healthy"}
+                        </TableCell>
                         <TableCell><Badge className={STATUS_STYLES[item.status]}>{item.status}</Badge></TableCell>
                         <TableCell className="text-xs text-muted-foreground">{item.recommendation}</TableCell>
                       </TableRow>

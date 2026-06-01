@@ -19,8 +19,8 @@ const features = [
     description: "Estimate package weight and surface heavy runtime dependencies.",
   },
   {
-    title: "Risk detection",
-    description: "Flag archived, deprecated, or low-signal packages early.",
+    title: "Dependency death checker",
+    description: "Detect archived, unmaintained, and deprecated packages with a clear risk score.",
   },
   {
     title: "Upgrade guidance",

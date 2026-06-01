@@ -23,7 +23,7 @@ export function Hero() {
         </h1>
         <p className="max-w-3xl text-base leading-7 text-muted-foreground sm:text-lg">
           Upload your package.json and get an instant build-style report on
-          package health, Expo alignment, architecture readiness, and bundle
+          package health, dependency death risk, Expo alignment, architecture readiness, and bundle
           pressure.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
@@ -39,6 +39,7 @@ export function Hero() {
           <span>New architecture</span>
           <span>Bundle impact</span>
           <span>Risk detection</span>
+          <span>Death checker</span>
         </div>
       </motion.div>
       <div className="pointer-events-none absolute -top-8 left-1/2 h-72 w-[38rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--primary)_28%,transparent),transparent_65%)] blur-xl" />
