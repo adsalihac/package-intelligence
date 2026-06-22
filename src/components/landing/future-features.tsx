@@ -2,14 +2,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
 const futureFeatures = [
-  "GitHub repository analysis",
+  "GitHub repository import",
   "npm package intelligence",
-  "CI/CD integration",
-  "Pull request checks",
+  "PR policy checks",
+  "Migration recipes",
+  "Upgrade blockers",
   "Team reports",
   "AI-powered recommendations",
   "Expo SDK upgrade assistant",
-  "Dependency update planner",
+  "Saved project dashboard",
 ];
 
 export function FutureFeatures() {

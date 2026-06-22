@@ -163,6 +163,12 @@ export default async function Home() {
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-3 px-6 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:px-8">
           <span>package-intelligence © 2026</span>
           <div className="flex items-center gap-4">
+            <Link
+              href="/changelog"
+              className="text-xs font-semibold text-muted-foreground transition hover:text-foreground"
+            >
+              Changelog
+            </Link>
             <a
               href="https://www.producthunt.com/products/package-intelligence?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-package-intelligence"
               target="_blank"

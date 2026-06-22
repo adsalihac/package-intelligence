@@ -98,8 +98,17 @@ type SurviveReport = {
   repo?: { owner: string; repo: string };
 };
 
+type GitHubImportResponse = {
+  owner: string;
+  repo: string;
+  branch: string;
+  packageJson: { path: string; content: string };
+  lockfile?: { path: string; content: string };
+};
+
 type ProjectType = "Expo" | "React Native" | "Unknown";
 type DuplicateGroup = { category: string; packages: string[] };
+type PolicyStatus = "Pass" | "Warn" | "Fail";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -113,6 +122,54 @@ const DEMO_ALTERNATIVES: Record<string, string> = {
   "react-native-maps": "expo-location",
   "@react-native-async-storage/async-storage": "expo-secure-store",
   "react-native-async-storage": "expo-secure-store",
+};
+
+const MIGRATION_NOTES: Record<string, string[]> = {
+  "react-native-fast-image": [
+    "Install with `npx expo install expo-image`.",
+    "Replace `FastImage` imports with `Image` from `expo-image`.",
+    "Map `source={{ uri }}` directly, then review caching and placeholder props.",
+  ],
+  "react-native-video": [
+    "Install with `npx expo install expo-video`.",
+    "Move playback state into Expo's video player hook or player instance.",
+    "Retest background playback, fullscreen, and native controls on each platform.",
+  ],
+  "react-native-image-picker": [
+    "Install with `npx expo install expo-image-picker`.",
+    "Replace picker callbacks with async `launchImageLibraryAsync` or `launchCameraAsync` calls.",
+    "Audit permission copy for camera and media-library access.",
+  ],
+  "react-native-document-picker": [
+    "Install with `npx expo install expo-document-picker`.",
+    "Replace native picker calls with `getDocumentAsync`.",
+    "Normalize returned asset arrays before passing files into upload code.",
+  ],
+  "react-native-linear-gradient": [
+    "Install with `npx expo install expo-linear-gradient`.",
+    "Replace imports with `LinearGradient` from `expo-linear-gradient`.",
+    "Verify color stop order and layout sizing after the swap.",
+  ],
+  "react-native-camera": [
+    "Install with `npx expo install expo-camera`.",
+    "Replace camera view usage with Expo Camera APIs.",
+    "Recheck barcode scanning, permissions, and native configuration.",
+  ],
+  "react-native-maps": [
+    "Confirm whether the app needs maps or only location APIs.",
+    "Use `expo-location` for device location and keep `react-native-maps` only for map rendering.",
+    "Retest permission flows and background-location requirements.",
+  ],
+  "@react-native-async-storage/async-storage": [
+    "Use `expo-secure-store` only for small sensitive values.",
+    "Keep AsyncStorage for larger non-sensitive state, or split storage by data type.",
+    "Add a migration that reads old keys once and writes them to the new store.",
+  ],
+  "react-native-async-storage": [
+    "Replace the legacy package with `@react-native-async-storage/async-storage` or `expo-secure-store`.",
+    "Move sensitive tokens to SecureStore.",
+    "Remove stale imports after migrating persisted keys.",
+  ],
 };
 
 const FUNCTIONAL_GROUPS: Record<string, string[]> = {
@@ -353,6 +410,63 @@ const summarizeDeathChecker = (items: EnrichedInsight[]) => {
     riskLevel,
   };
 };
+
+const buildPolicyChecks = (
+  analysis: Analysis,
+  enriched: EnrichedInsight[],
+  death: ReturnType<typeof summarizeDeathChecker>
+) => {
+  const highRisk = enriched.filter((item) => (item.deathRiskLevel ?? "Low") === "High").length;
+  const expoBlockers = analysis.projectType === "Expo"
+    ? enriched.filter((item) => item.hasLiveData && item.expoGo === false && item.category === "Dependency").length
+    : 0;
+  const heavyRuntime = enriched.filter((item) => item.category === "Dependency" && item.bundleImpact === "High").length;
+
+  return [
+    {
+      label: "Archived or deprecated packages",
+      detail: `${death.archived + death.deprecated} detected`,
+      status: death.archived + death.deprecated > 0 ? "Fail" : "Pass",
+    },
+    {
+      label: "High death-risk dependencies",
+      detail: `${highRisk} high-risk packages`,
+      status: highRisk > 0 ? "Fail" : "Pass",
+    },
+    {
+      label: "Expo Go runtime compatibility",
+      detail: analysis.projectType === "Expo" ? `${expoBlockers} runtime blockers` : "Not an Expo project",
+      status: analysis.projectType !== "Expo" ? "Warn" : expoBlockers > 0 ? "Warn" : "Pass",
+    },
+    {
+      label: "Heavy runtime dependencies",
+      detail: `${heavyRuntime} high-impact packages`,
+      status: heavyRuntime > 2 ? "Fail" : heavyRuntime > 0 ? "Warn" : "Pass",
+    },
+    {
+      label: "Duplicate functionality",
+      detail: `${analysis.duplicates.length} duplicate groups`,
+      status: analysis.duplicates.length > 0 ? "Warn" : "Pass",
+    },
+  ] satisfies { label: string; detail: string; status: PolicyStatus }[];
+};
+
+const policyStyle = (status: PolicyStatus) =>
+  status === "Pass"
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-200"
+    : status === "Warn"
+      ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/15 dark:text-amber-200"
+      : "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/40 dark:bg-rose-400/15 dark:text-rose-200";
+
+const buildMigrationRecipes = (analysis: Analysis) =>
+  analysis.migrations.map((migration) => ({
+    ...migration,
+    steps: MIGRATION_NOTES[migration.current] ?? [
+      `Install ${migration.alternative} with your package manager.`,
+      `Replace imports from ${migration.current}.`,
+      "Run the app on iOS, Android, and web where supported.",
+    ],
+  }));
 
 const detectDuplicates = (names: string[]): DuplicateGroup[] => {
   const set = new Set(names);
@@ -723,6 +837,10 @@ export function PackageAnalyzer() {
   const [lockError, setLockError] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [latestExpo, setLatestExpo] = useState(56);
+  const [githubUrl, setGithubUrl] = useState("");
+  const [githubLoading, setGithubLoading] = useState(false);
+  const [githubError, setGithubError] = useState<string | null>(null);
+  const [githubImport, setGithubImport] = useState<GitHubImportResponse | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const lockRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -821,6 +939,49 @@ export function PackageAnalyzer() {
     else { setResolvedVers(resolved); setLockError(null); }
   };
 
+  const importFromGitHub = async () => {
+    const repo = githubUrl.trim();
+    if (!repo) {
+      setGithubError("Enter a GitHub repository URL.");
+      return;
+    }
+
+    setGithubLoading(true);
+    setGithubError(null);
+    setGithubImport(null);
+
+    try {
+      const response = await fetch(`/api/import-github?repo=${encodeURIComponent(repo)}`);
+      const data = (await response.json()) as GitHubImportResponse | { error?: string };
+
+      if (!response.ok) {
+        setGithubError("error" in data && data.error ? data.error : "Could not import this repository.");
+        return;
+      }
+
+      const imported = data as GitHubImportResponse;
+      setGithubImport(imported);
+      setInputValue(imported.packageJson.content);
+      doAnalyze(imported.packageJson.content);
+
+      if (imported.lockfile?.path === "package-lock.json") {
+        setLockValue(imported.lockfile.content);
+        handleLock(imported.lockfile.content);
+      } else if (imported.lockfile) {
+        setLockValue(imported.lockfile.content);
+        setLockError(`${imported.lockfile.path} imported. Resolved-version parsing currently supports package-lock.json.`);
+      } else {
+        setLockValue("");
+        setResolvedVers({});
+        setLockError(null);
+      }
+    } catch {
+      setGithubError("Failed to import from GitHub.");
+    } finally {
+      setGithubLoading(false);
+    }
+  };
+
   const checkSurvivability = useCallback(async () => {
     const name = surviveName.trim();
     if (!name) {
@@ -881,6 +1042,21 @@ export function PackageAnalyzer() {
   const topByDl = useMemo(() => [...enriched].filter((e) => (e.weekDownloads ?? 0) > 0).sort((a, b) => (b.weekDownloads ?? 0) - (a.weekDownloads ?? 0)).slice(0, 8), [enriched]);
   const platformPkgs = useMemo(() => enriched.filter((e) => e.platforms), [enriched]);
   const deathChecker = useMemo(() => summarizeDeathChecker(enriched), [enriched]);
+  const policyChecks = useMemo(
+    () => analysis ? buildPolicyChecks(analysis, enriched, deathChecker) : [],
+    [analysis, deathChecker, enriched]
+  );
+  const migrationRecipes = useMemo(
+    () => analysis ? buildMigrationRecipes(analysis) : [],
+    [analysis]
+  );
+  const upgradeBlockers = useMemo(
+    () => enriched
+      .filter((item) => item.status !== "Healthy" || item.newArchitecture === false || item.isArchived || item.isDeprecated)
+      .sort((a, b) => (b.deathRiskScore ?? 0) - (a.deathRiskScore ?? 0))
+      .slice(0, 6),
+    [enriched]
+  );
 
   const compareItems = useMemo((): [EnrichedInsight, EnrichedInsight] | null => {
     const [n1, n2] = Array.from(compareSet);
@@ -959,6 +1135,7 @@ export function PackageAnalyzer() {
             <Tabs defaultValue="upload">
               <TabsList className="w-full">
                 <TabsTrigger value="upload" className="w-full">Drag & Drop</TabsTrigger>
+                <TabsTrigger value="github" className="w-full">GitHub</TabsTrigger>
                 <TabsTrigger value="paste" className="w-full">Paste JSON</TabsTrigger>
                 <TabsTrigger value="lockfile" className="w-full">Lock File</TabsTrigger>
               </TabsList>
@@ -981,6 +1158,35 @@ export function PackageAnalyzer() {
                 <Button variant="outline" size="sm" className="w-full" onClick={() => { setInputValue(SAMPLE_PACKAGE_JSON); doAnalyze(SAMPLE_PACKAGE_JSON); }}>
                   Load Sample package.json
                 </Button>
+              </TabsContent>
+
+              <TabsContent value="github" className="mt-4 space-y-4">
+                <div className="space-y-2">
+                  <Input
+                    value={githubUrl}
+                    onChange={(e) => setGithubUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") void importFromGitHub(); }}
+                    placeholder="https://github.com/owner/repo"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Imports package.json from GitHub and loads package-lock.json when available.
+                  </p>
+                </div>
+                <Button size="sm" onClick={() => void importFromGitHub()} disabled={githubLoading}>
+                  {githubLoading ? "Importing..." : "Import repository"}
+                </Button>
+                {githubError && <p className="text-sm text-rose-500">{githubError}</p>}
+                {githubImport && (
+                  <div className="rounded-2xl border border-border/70 bg-muted/55 px-4 py-3 text-sm">
+                    <p className="font-semibold text-foreground">
+                      Imported {githubImport.owner}/{githubImport.repo}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Ref: {githubImport.branch} · {githubImport.packageJson.path}
+                      {githubImport.lockfile ? ` · ${githubImport.lockfile.path}` : " · no lockfile found"}
+                    </p>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="paste" className="mt-4 space-y-4">
@@ -1183,6 +1389,79 @@ export function PackageAnalyzer() {
               )}
             </CardContent>
           </Card>
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_1fr]">
+            <Card className="ai-panel border-border/70 bg-card/90">
+              <CardHeader>
+                <CardTitle className="text-xl">Upgrade Blockers</CardTitle>
+                <p className="text-sm text-muted-foreground">Packages most likely to slow down an Expo SDK or React Native upgrade.</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {upgradeBlockers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No obvious upgrade blockers detected.</p>
+                ) : upgradeBlockers.map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={() => setSelectedPkg(item)}
+                    className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border/70 bg-muted/50 px-4 py-3 text-left transition hover:bg-muted/70"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {item.isArchived ? "Archived" : item.isDeprecated ? "Deprecated" : !item.newArchitecture ? "New Architecture needs review" : item.status}
+                      </p>
+                    </div>
+                    <Badge className={RISK_LEVEL_STYLES[item.deathRiskLevel ?? "Low"]}>
+                      {item.deathRiskScore ?? 0}/100
+                    </Badge>
+                  </button>
+                ))}
+              </CardContent>
+            </Card>
+
+            <Card className="ai-panel border-border/70 bg-card/90">
+              <CardHeader>
+                <CardTitle className="text-xl">PR Policy Checks</CardTitle>
+                <p className="text-sm text-muted-foreground">A CI-ready summary for dependency update pull requests.</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {policyChecks.map((check) => (
+                  <div key={check.label} className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-muted/50 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{check.label}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{check.detail}</p>
+                    </div>
+                    <Badge className={policyStyle(check.status)}>{check.status}</Badge>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+
+          {migrationRecipes.length > 0 && (
+            <Card className="ai-panel mt-8 border-border/70 bg-card/90">
+              <CardHeader>
+                <CardTitle className="text-xl">Migration Recipes</CardTitle>
+                <p className="text-sm text-muted-foreground">Concrete replacement steps for the highest-value Expo migrations.</p>
+              </CardHeader>
+              <CardContent className="grid gap-4 lg:grid-cols-2">
+                {migrationRecipes.slice(0, 4).map((recipe) => (
+                  <div key={recipe.current} className="rounded-3xl border border-border/70 bg-muted/50 p-4">
+                    <p className="text-sm font-semibold text-foreground">
+                      {recipe.current} <span className="text-muted-foreground">→</span> <span className="text-primary">{recipe.alternative}</span>
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {recipe.steps.map((step) => (
+                        <p key={step} className="rounded-2xl bg-background/70 px-3 py-2 text-xs text-muted-foreground">
+                          {step}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Dependency Death Checker */}
           <Card className="ai-panel mt-8 border-border/70 bg-card/90">
