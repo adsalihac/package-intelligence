@@ -11,6 +11,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "0.5.0",
+    date: "2026-06-22",
+    title: "Engagement and sharing tools",
+    summary: "Added shareable report and README badge flows to make dependency health results easier to publish and revisit.",
+    changes: [
+      { type: "New", text: "Public shareable report page at `/report`." },
+      { type: "New", text: "README health badge generator with copyable Markdown." },
+      { type: "New", text: "Interactive fix queue for turning dependency risks into checklist tasks." },
+      { type: "Improved", text: "Share action now opens a polished report view instead of only sharing the analyzer state." },
+    ],
+  },
+  {
     version: "0.4.0",
     date: "2026-06-22",
     title: "Changelog screen",

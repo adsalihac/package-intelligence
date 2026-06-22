@@ -41,6 +41,7 @@ import {
   formatDownloads,
   formatRelativeDate,
 } from "@/lib/rn-directory";
+import { badgeColor } from "@/lib/public-report";
 import { SAMPLE_PACKAGE_JSON } from "@/lib/sample-package";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -468,6 +469,42 @@ const buildMigrationRecipes = (analysis: Analysis) =>
     ],
   }));
 
+const buildFixQueue = (analysis: Analysis, enriched: EnrichedInsight[]) => {
+  const riskTasks = enriched
+    .filter((item) => item.status !== "Healthy" || item.isArchived || item.isDeprecated || item.isUnmaintained)
+    .sort((a, b) => (b.deathRiskScore ?? 0) - (a.deathRiskScore ?? 0))
+    .map((item) => ({
+      id: `risk:${item.name}`,
+      title: `Resolve ${item.name}`,
+      detail: item.isArchived
+        ? "Replace this archived package before the next platform upgrade."
+        : item.isDeprecated
+          ? "Migrate away from this deprecated package."
+          : item.isUnmaintained
+            ? "Audit usage and prepare a maintained fallback."
+            : "Review package health, compatibility, and release cadence.",
+      impact: (item.deathRiskLevel ?? "Medium") as RiskLevel,
+    }));
+
+  const migrationTasks = analysis.migrations.map((item) => ({
+    id: `migration:${item.current}`,
+    title: `Evaluate ${item.alternative}`,
+    detail: `Replace ${item.current} where the Expo-native API covers your use case.`,
+    impact: "Medium" as RiskLevel,
+  }));
+
+  const upgradeTasks = analysis.expoUpgradeNeeded
+    ? [{
+        id: "upgrade:expo",
+        title: `Plan Expo SDK ${analysis.expoInstalledMajor} to ${analysis.latestExpoMajor}`,
+        detail: "Run expo-doctor, review blockers, and upgrade one SDK step at a time.",
+        impact: "High" as RiskLevel,
+      }]
+    : [];
+
+  return [...upgradeTasks, ...riskTasks, ...migrationTasks].slice(0, 10);
+};
+
 const detectDuplicates = (names: string[]): DuplicateGroup[] => {
   const set = new Set(names);
   return Object.entries(FUNCTIONAL_GROUPS)
@@ -856,6 +893,8 @@ export function PackageAnalyzer() {
   const [sortCol, setSortCol] = useState<{ col: keyof EnrichedInsight; asc: boolean } | null>(null);
   const [tableTab, setTableTab] = useState("all");
   const [copied, setCopied] = useState(false);
+  const [copiedBadge, setCopiedBadge] = useState(false);
+  const [completedFixes, setCompletedFixes] = useState<Set<string>>(new Set());
   const [resolvedVers, setResolvedVers] = useState<Record<string, string>>({});
   const [surviveName, setSurviveName] = useState("");
   const [surviveLoading, setSurviveLoading] = useState(false);
@@ -921,6 +960,7 @@ export function PackageAnalyzer() {
       setAnalysis(analyze(parsed, latestExpo));
       setError(null);
       setCompareSet(new Set());
+      setCompletedFixes(new Set());
       setSearch("");
     } catch {
       setError("Invalid JSON — please check your package.json formatting.");
@@ -1057,6 +1097,10 @@ export function PackageAnalyzer() {
       .slice(0, 6),
     [enriched]
   );
+  const fixQueue = useMemo(
+    () => analysis ? buildFixQueue(analysis, enriched) : [],
+    [analysis, enriched]
+  );
 
   const compareItems = useMemo((): [EnrichedInsight, EnrichedInsight] | null => {
     const [n1, n2] = Array.from(compareSet);
@@ -1071,6 +1115,15 @@ export function PackageAnalyzer() {
       const next = new Set(prev);
       if (next.has(name)) next.delete(name);
       else if (next.size < 2) next.add(name);
+      return next;
+    });
+  };
+
+  const toggleFix = (id: string) => {
+    setCompletedFixes((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -1091,7 +1144,7 @@ export function PackageAnalyzer() {
   const share = () => {
     try {
       const enc = btoa(unescape(encodeURIComponent(inputValue)));
-      const url = `${window.location.href.split("#")[0]}#q=${enc}`;
+      const url = `${window.location.origin}/report#q=${enc}`;
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(url).then(() => {
           setCopied(true);
@@ -1101,6 +1154,38 @@ export function PackageAnalyzer() {
         fallbackCopy(url);
       }
     } catch { /* ignore */ }
+  };
+
+  const copyBadge = () => {
+    if (!analysis) return;
+    const enc = btoa(unescape(encodeURIComponent(inputValue)));
+    const reportUrl = `${window.location.origin}/report#q=${enc}`;
+    const badge = `[![Package Health](https://img.shields.io/badge/package%20health-${encodeURIComponent(grade(analysis.avgHealth))}-${badgeColor(analysis.avgHealth)})](${reportUrl})`;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(badge).catch(() => {
+        const ta = document.createElement("textarea");
+        ta.value = badge;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      });
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = badge;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setCopiedBadge(true);
+    setTimeout(() => setCopiedBadge(false), 2500);
   };
 
   const fallbackCopy = (text: string) => {
@@ -1462,6 +1547,74 @@ export function PackageAnalyzer() {
               </CardContent>
             </Card>
           )}
+
+          <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_1fr]">
+            <Card className="ai-panel border-border/70 bg-card/90">
+              <CardHeader>
+                <CardTitle className="text-xl">Interactive Fix Queue</CardTitle>
+                <p className="text-sm text-muted-foreground">Turn the analysis into a working checklist for dependency cleanup.</p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {fixQueue.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No fixes queued. This project looks calm.</p>
+                ) : fixQueue.map((item) => {
+                  const done = completedFixes.has(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => toggleFix(item.id)}
+                      className={`flex w-full items-start gap-3 rounded-2xl border border-border/70 px-4 py-3 text-left transition hover:bg-muted/70 ${done ? "bg-emerald-50/60 dark:bg-emerald-500/10" : "bg-muted/50"}`}
+                    >
+                      <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${done ? "border-emerald-500 bg-emerald-500 text-white" : "border-border bg-background"}`}>
+                        {done && <Check size={13} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className={`block text-sm font-semibold ${done ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                          {item.title}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">{item.detail}</span>
+                      </span>
+                      <Badge className={RISK_LEVEL_STYLES[item.impact]}>{item.impact}</Badge>
+                    </button>
+                  );
+                })}
+                {fixQueue.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {completedFixes.size}/{fixQueue.length} fixes marked done in this session.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="ai-panel border-border/70 bg-card/90">
+              <CardHeader>
+                <CardTitle className="text-xl">Shareable Report & Badge</CardTitle>
+                <p className="text-sm text-muted-foreground">Create a public report link or copy a README badge for your repository.</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-3xl border border-border/70 bg-muted/50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">README Badge</p>
+                  <div className="mt-3 inline-flex items-center gap-2 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm font-semibold text-foreground">
+                    <span>Package Health</span>
+                    <Badge className={analysis.avgHealth >= 80 ? RISK_LEVEL_STYLES.Low : analysis.avgHealth >= 60 ? RISK_LEVEL_STYLES.Medium : RISK_LEVEL_STYLES.High}>
+                      {grade(analysis.avgHealth)}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={share}>
+                    {copied ? <><Check size={14} />Copied report</> : <><Share2 size={14} />Copy report link</>}
+                  </Button>
+                  <Button size="sm" onClick={copyBadge}>
+                    {copiedBadge ? <><Check size={14} />Copied badge</> : <><Copy size={14} />Copy badge markdown</>}
+                  </Button>
+                </div>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Report links encode the package.json in the URL hash, so they work without storing project data on a server.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Dependency Death Checker */}
           <Card className="ai-panel mt-8 border-border/70 bg-card/90">
